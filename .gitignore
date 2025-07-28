@@ -1,1 +1,166 @@
+#----------------------#
+#      Go Specific     #
+#----------------------#
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+*.coverprofile
+*_test.go_cover.out
+
+# Dependency directories (remove the comment below if you want to commit vendor/)
+# vendor/
+
+# Go workspace file
+go.work
+
+#----------------------#
+#   Build Artifacts    #
+#----------------------#
+
+# General build output directories
+/bin/
+/build/
+/dist/
+/out/
+/_build/
+
+# Specific project binaries (adjust paths if needed)
+# If you build binaries directly in cmd/ subdirectories
+cmd/*/main
+# Or if you have a specific output directory like bin/
+bin/
+
+#----------------------#
+# Environment & Config #
+#----------------------#
+
+# Environment variables
 .env
+.env.local
+.env.*.local # e.g., .env.development.local, .env.production.local
+
+# Local configuration overrides (if you use this pattern)
+configs/config.local.yaml
+configs/*-local.yaml
+
+#----------------------#
+#       Logs & Data    #
+#----------------------#
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Local database files (if using SQLite for local dev)
+*.sqlite
+*.sqlite3
+*.db
+
+# Data directory (if you use one for local dev)
+/data/
+
+#----------------------#
+#   IDEs & Editors     #
+#----------------------#
+
+# IntelliJ / GoLand
+.idea/
+
+# VS Code
+.vscode/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*
+.*\#
+
+#----------------------#
+#   OS Generated Files #
+#----------------------#
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+
+#----------------------#
+#   Docker (if used)   #
+#----------------------#
+
+# Docker Compose override files (local customizations)
+docker-compose.override.yml
+docker-compose.*.yml # e.g., docker-compose.dev.yml (if not intended for repo)
+
+#----------------------#
+#   Node.js (if frontend or tooling uses it) #
+#----------------------#
+
+# Node modules
+node_modules/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+#----------------------#
+#   Miscellaneous      #
+#----------------------#
+
+# Coverage output (if tools generate it outside standard locations)
+coverage/
+*.lcov
+
+# Temporary files
+tmp/
+temp/
+
+# Package files (if you distribute archives)
+*.tar.gz
+*.zip
+
+# Sentry crash report config (if used)
+.sentryclirc
+
+# Terraform (if used for infrastructure)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+*.tfvars.json
+crash.log
