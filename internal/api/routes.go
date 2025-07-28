@@ -25,6 +25,10 @@ func SetupRouter(
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORS())
 
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Welcome to Finbro API"})
+	})
+
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "healthy"})

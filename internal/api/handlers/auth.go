@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"finbro-backend-go/internal/api/auth"
+	"finbro-backend-go/internal/auth"
 	"finbro-backend-go/internal/config"
 	"finbro-backend-go/internal/db"
 	"finbro-backend-go/internal/db/models"
@@ -25,15 +25,18 @@ type AuthHandler struct {
 	stateStore  map[string]time.Time
 }
 
-func NewAuthHandler(db *db.DB, cfg *config.Config, jwtAuth *auth.JWTAuth, googleOAuth *auth.GoogleOAuth, userService *services.UserService) *AuthHandler {
-	return &AuthHandler{
-		db:          db,
-		cfg:         cfg,
-		jwtAuth:     jwtAuth,
-		googleOAuth: googleOAuth,
-		userService: userService,
-		stateStore:  make(map[string]time.Time),
-	}
+func NewAuthHandler(db *db.DB, cfg *config.Config, userService *services.UserService) *AuthHandler {
+    jwtAuth := auth.NewJWTAuth(cfg)
+    googleOAuth := auth.NewGoogleOAuth(cfg)
+
+    return &AuthHandler{
+        db:          db,
+        cfg:         cfg,
+        jwtAuth:     jwtAuth,
+        googleOAuth: googleOAuth,
+        userService: userService,
+        stateStore:  make(map[string]time.Time),
+    }
 }
 
 type RegisterRequest struct {
