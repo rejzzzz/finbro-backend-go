@@ -1,4 +1,4 @@
-// File 7: internal/api/middleware/cors.go
+// internal/api/middleware/cors.go
 package middleware
 
 import (

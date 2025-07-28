@@ -10,7 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(database *db.DB, cfg *config.Config) *gin.Engine {
+func SetupRouter(
+	database *db.DB,
+	cfg *config.Config,
+	authHandler *handlers.AuthHandler,
+	userHandler *handlers.UserHandler,
+	accountHandler *handlers.AccountHandler,
+	transactionHandler *handlers.TransactionHandler,
+) *gin.Engine {
 	router := gin.New()
 
 	// Global middleware
@@ -18,33 +25,31 @@ func SetupRouter(database *db.DB, cfg *config.Config) *gin.Engine {
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORS())
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(database, cfg)
-	userHandler := handlers.NewUserHandler(database)
-	accountHandler := handlers.NewAccountHandler(database)
-	transactionHandler := handlers.NewTransactionHandler(database)
-
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "healthy"})
 	})
 
+	jwtSecret := cfg.JWT.Secret
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
 		// Auth routes (no middleware)
-		auth := v1.Group("/auth")
+		authGroup := v1.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			// auth.GET("/google", authHandler.GoogleLogin)
-			// auth.GET("/google/callback", authHandler.GoogleCallback)
+			authGroup.POST("/register", authHandler.Register)
+			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/refresh", authHandler.RefreshToken) // Ensure RefreshToken uses user_id from context
+			// --- Add Google OAuth routes ---
+			authGroup.GET("/google", authHandler.GoogleLogin)
+			authGroup.GET("/google/callback", authHandler.GoogleCallback)
 		}
 
 		// Protected routes
 		protected := v1.Group("/")
-		protected.Use(middleware.AuthRequired(cfg.JWTSecret))
+		// --- FIXED: Pass the correct JWT secret ---
+		protected.Use(middleware.AuthRequired(jwtSecret)) // Use the extracted secret
 		{
 			// User routes
 			users := protected.Group("/users")

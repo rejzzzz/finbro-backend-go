@@ -1,12 +1,13 @@
-// File 9: internal/api/handlers/user.go
+// internal/api/handlers/user.go
 package handlers
 
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"finbro-backend-go/internal/db"
 	"finbro-backend-go/internal/db/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {

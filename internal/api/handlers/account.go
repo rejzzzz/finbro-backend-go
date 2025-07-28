@@ -1,13 +1,14 @@
-// File 10: internal/api/handlers/account.go
+// internal/api/handlers/account.go
 package handlers
 
 import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"finbro-backend-go/internal/db"
 	"finbro-backend-go/internal/db/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AccountHandler struct {

@@ -1,4 +1,4 @@
-// File 3: internal/db/connection.go
+// internal/db/connection.go
 package db
 
 import (

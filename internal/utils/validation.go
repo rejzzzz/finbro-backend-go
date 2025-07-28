@@ -1,4 +1,4 @@
-// File: internal/utils/validation.go
+// internal/utils/validation.go
 package utils
 
 import (
@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+	emailRegex      = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 	validCurrencies = map[string]bool{
 		"USD": true, "EUR": true, "GBP": true, "INR": true,
 		"CAD": true, "AUD": true, "JPY": true, "CNY": true,

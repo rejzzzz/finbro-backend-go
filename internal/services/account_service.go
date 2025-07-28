@@ -1,4 +1,4 @@
-// File 13: internal/services/account_service.go
+// internal/services/account_service.go
 package services
 
 import (

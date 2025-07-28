@@ -1,4 +1,4 @@
-// File 6: internal/api/middleware/auth.go
+// internal/api/middleware/auth.go
 package middleware
 
 import (

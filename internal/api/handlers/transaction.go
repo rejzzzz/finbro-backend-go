@@ -1,4 +1,4 @@
-// File 11: internal/api/handlers/transaction.go
+// internal/api/handlers/transaction.go
 package handlers
 
 import (
@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"finbro-backend-go/internal/db"
 	"finbro-backend-go/internal/db/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TransactionHandler struct {
@@ -30,7 +31,7 @@ type CreateTransactionRequest struct {
 
 func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 	userID, _ := c.Get("user_id")
-	
+
 	// Query parameters
 	accountID := c.Query("account_id")
 	category := c.Query("category")
@@ -38,7 +39,7 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
 	query := h.db.Where("user_id = ?", userID)
-	
+
 	if accountID != "" {
 		query = query.Where("account_id = ?", accountID)
 	}
@@ -90,7 +91,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 
 	// Start transaction to update account balance
 	tx := h.db.Begin()
-	
+
 	if err := tx.Create(transaction).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction"})
@@ -102,7 +103,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	if req.Type == "debit" {
 		balanceChange = -balanceChange
 	}
-	
+
 	if err := tx.Model(&account).Update("balance", account.Balance+balanceChange).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update balance"})

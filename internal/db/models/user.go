@@ -1,4 +1,4 @@
-// File 4: internal/db/models/user.go
+// internal/db/models/user.go
 package models
 
 import (

@@ -1,26 +1,39 @@
-// File 8: internal/api/handlers/auth.go
+// internal/api/handlers/auth.go
 package handlers
 
 import (
-	"fmt"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"time"
 
+	"finbro-backend-go/internal/api/auth"
 	"finbro-backend-go/internal/config"
 	"finbro-backend-go/internal/db"
 	"finbro-backend-go/internal/db/models"
+	"finbro-backend-go/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 type AuthHandler struct {
-	db  *db.DB
-	cfg *config.Config
+	db          *db.DB
+	cfg         *config.Config
+	jwtAuth     *auth.JWTAuth
+	googleOAuth *auth.GoogleOAuth
+	userService *services.UserService
+	stateStore  map[string]time.Time
 }
 
-func NewAuthHandler(db *db.DB, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{db: db, cfg: cfg}
+func NewAuthHandler(db *db.DB, cfg *config.Config, jwtAuth *auth.JWTAuth, googleOAuth *auth.GoogleOAuth, userService *services.UserService) *AuthHandler {
+	return &AuthHandler{
+		db:          db,
+		cfg:         cfg,
+		jwtAuth:     jwtAuth,
+		googleOAuth: googleOAuth,
+		userService: userService,
+		stateStore:  make(map[string]time.Time),
+	}
 }
 
 type RegisterRequest struct {
@@ -65,13 +78,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	token, err := h.generateToken(user.ID, user.Email)
+	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
-	user.Password = "" // Don't return password
+	user.Password = ""
 	c.JSON(http.StatusCreated, AuthResponse{Token: token, User: user})
 }
 
@@ -93,7 +106,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.generateToken(user.ID, user.Email)
+	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -116,7 +129,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	token, err := h.generateToken(user.ID, user.Email)
+	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -125,20 +138,89 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-func (h *AuthHandler) generateToken(userID uint, email string) (string, error) {
-	claims := &jwt.RegisteredClaims{
-		Subject:   fmt.Sprint(userID),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.cfg.JWTExpiry)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Issuer:    "finbro-backend",
-		Audience:  []string{"client"},
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	state, err := h.generateState()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state"})
+		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(h.cfg.JWTSecret))
+	h.stateStore[state] = time.Now().Add(5 * time.Minute)
+
+	h.cleanupExpiredStates()
+
+	authURL := h.googleOAuth.GetAuthURL(state)
+
+	c.JSON(http.StatusOK, gin.H{
+		"auth_url": authURL,
+		"state":    state,
+	})
 }
 
-// func (h *AuthHandler) GoogleLogin(c *gin.Context)
-// func (h *AuthHandler) GoogleCallback(c *gin.Context)
+func (h *AuthHandler) GoogleCallback(c *gin.Context) {
+	code := c.Query("code")
+	state := c.Query("state")
 
-//func (h *AuthHandler) createOrUpdateOAuthUser(googleUser *GoogleUser) (*models.User, error)
+	if !h.validateState(state) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired state parameter"})
+		return
+	}
+
+	delete(h.stateStore, state)
+
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code not provided"})
+		return
+	}
+
+	token, err := h.googleOAuth.ExchangeCode(c.Request.Context(), code)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to exchange code for token"})
+		return
+	}
+
+	googleUser, err := h.googleOAuth.GetUserInfo(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user info from Google"})
+		return
+	}
+
+	user, err := h.userService.CreateOrUpdateOAuthUser(c, googleUser.Email, googleUser.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or update user"})
+		return
+	}
+
+	jwtToken, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, AuthResponse{Token: jwtToken, User: user})
+}
+
+func (h *AuthHandler) generateState() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func (h *AuthHandler) validateState(state string) bool {
+	expiry, exists := h.stateStore[state]
+	if !exists {
+		return false
+	}
+	return time.Now().Before(expiry)
+}
+
+func (h *AuthHandler) cleanupExpiredStates() {
+	now := time.Now()
+	for state, expiry := range h.stateStore {
+		if now.After(expiry) {
+			delete(h.stateStore, state)
+		}
+	}
+}
